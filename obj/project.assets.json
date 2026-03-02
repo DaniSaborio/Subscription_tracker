@@ -11016,11 +11016,11 @@
   "project": {
     "version": "1.0.0",
     "restore": {
-      "projectUniqueName": "/home/sabo/GIT/Subscription_tracker/Subscription_tracker/Subscription_tracker.csproj",
+      "projectUniqueName": "/home/sabo/GIT/Subscription_tracker/Subscription_tracker.csproj",
       "projectName": "Subscription_tracker",
-      "projectPath": "/home/sabo/GIT/Subscription_tracker/Subscription_tracker/Subscription_tracker.csproj",
+      "projectPath": "/home/sabo/GIT/Subscription_tracker/Subscription_tracker.csproj",
       "packagesPath": "/home/sabo/.nuget/packages/",
-      "outputPath": "/home/sabo/GIT/Subscription_tracker/Subscription_tracker/obj/",
+      "outputPath": "/home/sabo/GIT/Subscription_tracker/obj/",
       "projectStyle": "PackageReference",
       "crossTargeting": true,
       "configFilePaths": [

@@ -1,8 +1,8 @@
 {
   "version": 2,
-  "dgSpecHash": "itOkJddjNHE=",
+  "dgSpecHash": "rfGzbQY/+3A=",
   "success": true,
-  "projectFilePath": "/home/sabo/GIT/Subscription_tracker/Subscription_tracker/Subscription_tracker.csproj",
+  "projectFilePath": "/home/sabo/GIT/Subscription_tracker/Subscription_tracker.csproj",
   "expectedPackageFiles": [
     "/home/sabo/.nuget/packages/googlegson/2.13.1.1/googlegson.2.13.1.1.nupkg.sha512",
     "/home/sabo/.nuget/packages/microsoft.extensions.configuration/10.0.0/microsoft.extensions.configuration.10.0.0.nupkg.sha512",
