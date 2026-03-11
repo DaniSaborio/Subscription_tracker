@@ -1,23 +1,44 @@
-﻿namespace Subscription_tracker;
+﻿using System.Collections.ObjectModel;
+
+namespace Subscription_tracker;
 
 public partial class MainPage : ContentPage
 {
-	int count = 0;
+    // Si no quieres esto, puedes quitarlo; es solo ejemplo de frontend:
+    private readonly ObservableCollection<object> _subscriptions =
+        new();
 
-	public MainPage()
-	{
-		InitializeComponent();
-	}
+    public MainPage()
+    {
+        InitializeComponent();
 
-	private void OnCounterClicked(object? sender, EventArgs e)
-	{
-		count++;
+        // Para que el CollectionView no truene al iniciar
+        SubscriptionsCollection.ItemsSource = _subscriptions;
+    }
 
-		if (count == 1)
-			CounterBtn.Text = $"Clicked {count} time";
-		else
-			CounterBtn.Text = $"Clicked {count} times";
+    // Toolbar y botón "Agregar suscripción"
+    private void OnAddSubscriptionClicked(object sender, EventArgs e)
+    {
+        // TODO: Navegar a formulario o abrir modal
+        // await Navigation.PushAsync(new SubscriptionFormPage());
+    }
 
-		SemanticScreenReader.Announce(CounterBtn.Text);
-	}
+    // Búsqueda por texto
+    private void OnSearchTextChanged(object sender, TextChangedEventArgs e)
+    {
+        // TODO: filtrar ItemsSource según e.NewTextValue
+    }
+
+    // Filtro por ciclo de facturación
+    private void OnBillingCycleFilterChanged(object sender, EventArgs e)
+    {
+        // TODO: filtrar lista según BillingCyclePicker.SelectedItem
+    }
+
+    // Tap en una suscripción de la lista
+    private void OnSubscriptionSelected(object sender, SelectionChangedEventArgs e)
+    {
+        // TODO: abrir detalle / formulario de edición
+        // var selected = e.CurrentSelection.FirstOrDefault();
+    }
 }

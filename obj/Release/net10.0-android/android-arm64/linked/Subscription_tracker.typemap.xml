@@ -1,0 +1,8 @@
+<api type="release" assembly-name="Subscription_tracker" mvid="ca11719a1cdb4d11aa1d836353a904a1">
+  <module assembly-name="Subscription_tracker" mvid="ca11719a1cdb4d11aa1d836353a904a1" mvid-bytes="mnERytscEU2qHYNjU6kEoQ==">
+    <types-scratch>
+      <entry key="crc64316794968bc1fc57/MainActivity" java-name="crc64316794968bc1fc57/MainActivity" managed-type-name="Subscription_tracker.MainActivity" token="33554441" />
+      <entry key="crc64316794968bc1fc57/MainApplication" java-name="crc64316794968bc1fc57/MainApplication" managed-type-name="Subscription_tracker.MainApplication" token="33554442" />
+    </types-scratch>
+  </module>
+</api>
