@@ -1,0 +1,81 @@
+<?xml version="1.0" encoding="utf-8" ?>
+<ContentPage xmlns="http://schemas.microsoft.com/dotnet/2021/maui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2009/xaml"
+             x:Class="Subscription_tracker.Pages.AddSubscriptionPage"
+             Title="Add Subscription"
+             BackgroundColor="{StaticResource PageBackgroundColor}">
+
+    <ScrollView>
+        <VerticalStackLayout Padding="20" Spacing="12">
+
+            <Label Text="Service Name" FontAttributes="Bold"/>
+            <Entry x:Name="ServiceNameEntry"
+                   Placeholder="e.g., Netflix"
+                   PlaceholderColor="#999"/>
+
+            <Label Text="Category" FontAttributes="Bold"/>
+            <Picker x:Name="CategoryPicker"
+                    Title="Select Category">
+                <Picker.Items>
+                    <x:String>Entertainment</x:String>
+                    <x:String>Education</x:String>
+                    <x:String>Productivity</x:String>
+                    <x:String>Cloud Storage</x:String>
+                    <x:String>Music/Podcast</x:String>
+                    <x:String>News</x:String>
+                    <x:String>Other</x:String>
+                </Picker.Items>
+            </Picker>
+
+            <Label Text="Amount" FontAttributes="Bold"/>
+            <Entry x:Name="AmountEntry"
+                   Placeholder="9.99"
+                   Keyboard="Numeric"
+                   PlaceholderColor="#999"/>
+
+            <Label Text="Billing Cycle" FontAttributes="Bold"/>
+            <Picker x:Name="BillingCyclePicker"
+                    Title="Select Cycle">
+                <Picker.Items>
+                    <x:String>Monthly</x:String>
+                    <x:String>Biweekly</x:String>
+                </Picker.Items>
+            </Picker>
+
+            <Label Text="Next Billing Date" FontAttributes="Bold"/>
+            <DatePicker x:Name="NextBillingDatePicker"/>
+
+            <Label Text="Payment Method" FontAttributes="Bold"/>
+            <Entry x:Name="PaymentMethodEntry"
+                   Placeholder="Credit Card, PayPal, etc"
+                   PlaceholderColor="#999"/>
+
+            <Label Text="Notes (Optional)" FontAttributes="Bold"/>
+            <Editor x:Name="NotesEditor"
+                    Placeholder="Add any notes here..."
+                    HeightRequest="100"
+                    PlaceholderColor="#999"/>
+
+            <HorizontalStackLayout Spacing="10" Margin="0,20,0,0">
+                <Button Text="Save"
+                        Clicked="OnSaveClicked"
+                        BackgroundColor="{StaticResource Primary}"
+                        TextColor="White"
+                        HorizontalOptions="FillAndExpand"/>
+
+                <Button Text="Cancel"
+                        Clicked="OnCancelClicked"
+                        BackgroundColor="#CCC"
+                        TextColor="Black"
+                        HorizontalOptions="FillAndExpand"/>
+            </HorizontalStackLayout>
+
+            <Label x:Name="ErrorLabel"
+                   Text=""
+                   TextColor="Red"
+                   IsVisible="False"/>
+
+        </VerticalStackLayout>
+    </ScrollView>
+
+</ContentPage>

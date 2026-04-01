@@ -1,0 +1,41 @@
+# Build results
+bin/
+obj/
+*.dll
+*.exe
+*.pdb
+
+# MAUI
+*.apk
+*.aab
+*.idsig
+
+# User-specific files
+.vs/
+.vscode/
+*.user
+*.suo
+*.userprefs
+*.sln.iml
+
+# Environment
+.env
+.env.local
+appsettings.Development.json
+
+# Database
+*.db
+*.db-shm
+*.db-wal
+subscription_tracker.db
+
+# Docker
+.docker/
+
+# IDE
+.idea/
+.DS_Store
+Thumbs.db
+
+# Local development
+docker-compose.override.yml

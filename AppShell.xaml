@@ -4,11 +4,33 @@
     xmlns="http://schemas.microsoft.com/dotnet/2021/maui"
     xmlns:x="http://schemas.microsoft.com/winfx/2009/xaml"
     xmlns:local="clr-namespace:Subscription_tracker"
+    xmlns:pages="clr-namespace:Subscription_tracker.Pages"
     Title="Subscription_tracker">
 
+    <!-- Login / Register routes (not in TabBar) -->
     <ShellContent
-        Title="Home"
-        ContentTemplate="{DataTemplate local:MainPage}"
-        Route="MainPage" />
+        Title="Login"
+        ContentTemplate="{DataTemplate pages:LoginPage}"
+        Route="login" />
+
+    <ShellContent
+        Title="Register"
+        ContentTemplate="{DataTemplate pages:RegisterPage}"
+        Route="register" />
+
+    <!-- Main navigation -->
+    <TabBar>
+        <ShellContent
+            Title="Home"
+            Icon="home"
+            ContentTemplate="{DataTemplate local:MainPage}"
+            Route="home" />
+    </TabBar>
+
+    <!-- Modal routes -->
+    <ShellContent
+        Title="Add Subscription"
+        ContentTemplate="{DataTemplate pages:AddSubscriptionPage}"
+        Route="add" />
 
 </Shell>

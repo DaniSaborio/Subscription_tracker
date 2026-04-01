@@ -1,4 +1,0 @@
-/home/sabo/GIT/Subscription_tracker/bin/Release/net10.0-android/publish/com.companyname.subscription_tracker-Signed.aab
-/home/sabo/GIT/Subscription_tracker/bin/Release/net10.0-android/publish/com.companyname.subscription_tracker.aab
-/home/sabo/GIT/Subscription_tracker/bin/Release/net10.0-android/publish/com.companyname.subscription_tracker-Signed.apk
-/home/sabo/GIT/Subscription_tracker/bin/Release/net10.0-android/publish/_Microsoft.Android.Resource.Designer.dll

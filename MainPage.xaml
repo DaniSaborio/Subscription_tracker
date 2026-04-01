@@ -13,28 +13,50 @@
 
     <VerticalStackLayout Padding="20" Spacing="16">
 
+        <!-- Estado de conexión -->
+        <HorizontalStackLayout HorizontalOptions="End" Spacing="5">
+            <Label Text="Status:"
+                   FontSize="12"/>
+            <Label x:Name="ConnectivityStatusLabel"
+                   Text="Online"
+                   TextColor="Green"
+                   FontSize="12"
+                   FontAttributes="Bold"/>
+        </HorizontalStackLayout>
+
         <!-- Resumen -->
         <VerticalStackLayout Spacing="4">
-            <Label Text="Resumen mensual"
+            <Label Text="Summary"
                    FontSize="22"
                    FontAttributes="Bold" />
 
             <HorizontalStackLayout Spacing="12">
                 <VerticalStackLayout>
-                    <Label Text="Suscripciones"
+                    <Label Text="Subscriptions"
                            FontSize="12"
                            TextColor="{DynamicResource Gray600}" />
-                    <Label x:Name="TotalSubscriptionsLabel"
-                           Text="0"
+                    <Label x:Name="SubscriptionCountLabel"
+                           Text="0 active"
                            FontSize="18"
                            FontAttributes="Bold" />
                 </VerticalStackLayout>
 
                 <VerticalStackLayout>
-                    <Label Text="Gasto mensual"
+                    <Label Text="Monthly"
                            FontSize="12"
                            TextColor="{DynamicResource Gray600}" />
-                    <Label x:Name="TotalAmountLabel"
+                    <Label x:Name="MonthlyCostLabel"
+                           Text="$0.00"
+                           FontSize="18"
+                           FontAttributes="Bold"
+                           TextColor="#FF3B30" />
+                </VerticalStackLayout>
+
+                <VerticalStackLayout>
+                    <Label Text="Biweekly"
+                           FontSize="12"
+                           TextColor="{DynamicResource Gray600}" />
+                    <Label x:Name="BiweeklyCostLabel"
                            Text="$0.00"
                            FontSize="18"
                            FontAttributes="Bold"
@@ -49,18 +71,18 @@
         <!-- Filtros simples -->
         <HorizontalStackLayout Spacing="8">
             <SearchBar x:Name="SearchBar"
-                       Placeholder="Buscar suscripción..."
+                       Placeholder="Search subscription..."
                        HorizontalOptions="FillAndExpand"
                        TextChanged="OnSearchTextChanged" />
 
             <Picker x:Name="BillingCyclePicker"
-                    Title="Ciclo"
+                    Title="Cycle"
                     WidthRequest="120"
                     SelectedIndexChanged="OnBillingCycleFilterChanged">
                 <Picker.Items>
-                    <x:String>Todos</x:String>
-                    <x:String>Mensual</x:String>
-                    <x:String>Anual</x:String>
+                    <x:String>All</x:String>
+                    <x:String>Monthly</x:String>
+                    <x:String>Biweekly</x:String>
                 </Picker.Items>
             </Picker>
         </HorizontalStackLayout>
@@ -75,9 +97,9 @@
                 <VerticalStackLayout Padding="20"
                                      HorizontalOptions="Center"
                                      VerticalOptions="Center">
-                    <Label Text="Aún no tienes suscripciones."
+                    <Label Text="No subscriptions yet."
                            HorizontalTextAlignment="Center" />
-                    <Label Text="Toca el + para agregar la primera."
+                    <Label Text="Tap + to add one."
                            FontSize="12"
                            TextColor="{DynamicResource Gray500}"
                            HorizontalTextAlignment="Center" />
@@ -95,33 +117,33 @@
                         <Grid ColumnDefinitions="*, Auto"
                               RowDefinitions="Auto, Auto, Auto">
 
-                            <!-- Nombre + precio -->
+                            <!-- Name + precio -->
                             <HorizontalStackLayout Grid.Row="0" Grid.ColumnSpan="2">
-                                <Label Text="{Binding Name}"
+                                <Label Text="{Binding ServiceName}"
                                        FontAttributes="Bold"
                                        FontSize="16"
                                        HorizontalOptions="StartAndExpand" />
-                                <Label Text="{Binding MonthlyCost, StringFormat='${0:F2}'}"
+                                <Label Text="{Binding Amount, StringFormat='${0:F2}'}"
                                        FontAttributes="Bold"
                                        TextColor="#FF3B30"
                                        HorizontalOptions="End" />
                             </HorizontalStackLayout>
 
-                            <!-- Ciclo + próximo cobro -->
+                            <!-- Category + próximo cobro -->
                             <HorizontalStackLayout Grid.Row="1"
                                                    Grid.ColumnSpan="2"
                                                    Spacing="8"
                                                    Margin="0,4,0,0">
-                                <Label Text="{Binding BillingCycle}"
+                                <Label Text="{Binding Category}"
                                        FontSize="12"
                                        TextColor="{DynamicResource Gray600}" />
                                 <Label Text="·"
                                        FontSize="12"
                                        TextColor="{DynamicResource Gray600}" />
-                                <Label Text="Próximo:"
+                                <Label Text="Next:"
                                        FontSize="12"
                                        TextColor="{DynamicResource Gray600}" />
-                                <Label Text="{Binding NextChargeDate, StringFormat='{0:dd/MM/yyyy}'}"
+                                <Label Text="{Binding NextBillingDate, StringFormat='{0:dd/MM/yyyy}'}"
                                        FontSize="12"
                                        TextColor="{DynamicResource Gray800}" />
                             </HorizontalStackLayout>
@@ -140,12 +162,5 @@
             </CollectionView.ItemTemplate>
         </CollectionView>
 
-        <!-- Botón flotante abajo -->
-        <Button Text="Agregar suscripción"
-                Margin="0,8,0,0"
-                CornerRadius="24"
-                HeightRequest="48"
-                Clicked="OnAddSubscriptionClicked"
-                HorizontalOptions="Fill" />
     </VerticalStackLayout>
 </ContentPage>
