@@ -26,7 +26,7 @@ public partial class MainPage : ContentPage
         // Check if user is logged in
         if (!_tokenService.IsUserLoggedIn())
         {
-            Shell.Current.GoToAsync("login");
+            await Shell.Current.GoToAsync("///login");
             return;
         }
 
@@ -77,7 +77,7 @@ public partial class MainPage : ContentPage
 
     private async void OnAddSubscriptionClicked(object sender, EventArgs e)
     {
-        await Shell.Current.GoToAsync("add");
+        await Shell.Current.GoToAsync("///add");
     }
 
     private void OnSearchTextChanged(object sender, TextChangedEventArgs e)
@@ -153,7 +153,7 @@ public partial class MainPage : ContentPage
         {
             // For now, delete and re-add
             // In future, can create EditSubscriptionPage
-            await Shell.Current.GoToAsync("add");
+            await Shell.Current.GoToAsync("///add");
         }
 
         SubscriptionsCollection.SelectedItem = null;

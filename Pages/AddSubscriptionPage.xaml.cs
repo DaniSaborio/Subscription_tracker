@@ -59,7 +59,7 @@ public partial class AddSubscriptionPage : ContentPage
             };
 
             await _syncService.SaveSubscriptionAsync(subscription);
-            await Shell.Current.GoToAsync("..");
+            await Shell.Current.GoToAsync("///home");
         }
         catch (Exception ex)
         {
@@ -70,6 +70,6 @@ public partial class AddSubscriptionPage : ContentPage
 
     private async void OnCancelClicked(object sender, EventArgs e)
     {
-        await Shell.Current.GoToAsync("..");
+        await Shell.Current.GoToAsync("///home");
     }
 }

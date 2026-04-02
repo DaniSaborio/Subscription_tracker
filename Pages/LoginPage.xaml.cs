@@ -53,6 +53,6 @@ public partial class LoginPage : ContentPage
 
     private async void OnRegisterTapped(object sender, TappedEventArgs e)
     {
-        await Shell.Current.GoToAsync("register");
+        await Shell.Current.GoToAsync("///register");
     }
 }

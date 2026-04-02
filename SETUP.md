@@ -1,200 +1,434 @@
 # Subscription Tracker MVP - Setup & Execution Guide
 
+## ⚡ Quick Start (5 minutes)
+
+```bash
+# 1. Start containers
+docker compose up -d
+
+# 2. Wait for PostgreSQL healthcheck
+sleep 10
+
+# 3. Verify API is running
+curl http://localhost:5000/swagger
+
+# 4. Test registration
+curl -X POST http://localhost:5000/api/auth/register \
+  -H "Content-Type: application/json" \
+  -d '{"email":"test@example.com","password":"Test123","confirmPassword":"Test123"}'
+```
+
+---
+
 ## Prerequisites
 
 Ensure you have installed:
-- **Docker & Docker Compose** (for PostgreSQL)
-- **.NET 10.0 SDK**
+- **Docker & Docker Compose** (check: `docker --version` && `docker compose --version`)
+- **.NET 10.0 SDK** (check: `dotnet --version`)
 - **MAUI workload**: `dotnet workload install maui`
 - **Android SDK** (if targeting Android)
+
+### On Linux (Ubuntu/Debian):
+```bash
+# Docker
+sudo apt-get install docker.io docker-compose
+sudo systemctl start docker
+sudo usermod -aG docker $USER  # Allow non-root docker commands
+
+# .NET 10.0
+wget https://dot.net/v1/dotnet-install.sh
+sudo bash dotnet-install.sh --channel 10.0
+
+# MAUI
+dotnet workload install maui android
+```
 
 ## Project Structure
 
 ```
 Subscription_tracker/
 ├── docker-compose.yml          # PostgreSQL + API containers
-├── Subscription_tracker.sln     # Solution file
+├── Subscription_tracker.sln     # Solution file (MAUI + API)
 ├── Subscription_tracker/        # MAUI Frontend App
-│   ├── MauiProgram.cs
-│   ├── App.xaml.cs
-│   ├── AppShell.xaml
-│   ├── MainPage.xaml / MainPage.xaml.cs
-│   ├── Models/SharedModels.cs
-│   ├── Pages/ (LoginPage, RegisterPage, AddSubscriptionPage)
-│   ├── Services/ (ApiService, TokenService, LocalStorageService, SyncService)
+│   ├── MauiProgram.cs          # DI configuration
+│   ├── MainPage.xaml / .cs     # Dashboard (list subscriptions)
+│   ├── Models/SharedModels.cs  # Shared DTOs
+│   ├── Pages/
+│   │   ├── LoginPage.xaml / .cs
+│   │   ├── RegisterPage.xaml / .cs
+│   │   └── AddSubscriptionPage.xaml / .cs
+│   ├── Services/
+│   │   ├── ApiService.cs            # HTTP client to API
+│   │   ├── TokenService.cs          # JWT token storage
+│   │   ├── LocalStorageService.cs   # SQLite offline cache
+│   │   └── SyncService.cs           # Offline/online sync
 │   └── Subscription_tracker.csproj
-└── Subscription_tracker.API/    # .NET Core Backend API
-    ├── Program.cs
-    ├── appsettings.json
+└── Subscription_tracker.API/    # ASP.NET Core Backend API
+    ├── Program.cs               # DI + JWT configuration
+    ├── appsettings.json         # Connection strings & JWT
     ├── Models/ (User, Subscription)
-    ├── DTOs/ (DTOs.cs)
-    ├── Data/ (AppDbContext.cs)
-    ├── Controllers/ (AuthController, SubscriptionsController)
-    ├── Services/ (JwtTokenService.cs)
+    ├── Data/AppDbContext.cs     # Entity Framework
+    ├── Controllers/
+    │   ├── AuthController.cs    # POST /register, /login
+    │   └── SubscriptionsController.cs  # GET/POST/PUT/DELETE
+    ├── Services/JwtTokenService.cs
     ├── Dockerfile
     └── Subscription_tracker.API.csproj
 ```
 
 ---
 
-## Step 1: Start Infrastructure (Docker)
+## Step 1: Verify Docker Installation
+
+### Check Docker is running:
+```bash
+docker ps
+# Should list running containers (may be empty)
+
+docker compose version
+# Should show: Docker Compose version vX.Y.Z
+```
+
+### If Docker not running (Linux):
+```bash
+sudo systemctl start docker
+sudo usermod -aG docker $USER
+# Log out and back in, or: newgrp docker
+```
+
+---
+
+## Step 2: Start Infrastructure (Docker + PostgreSQL + API)
 
 From the **project root** directory:
 
 ```bash
-# Start PostgreSQL + API
+# Start all containers
 docker compose up -d
 
-# Verify containers are running
+# Verify all containers are healthy
 docker compose ps
-
-# View API logs
-docker compose logs -f api
+# Expected:
+#   subscription_tracker_db    Healthy
+#   subscription_tracker_api   Running
 ```
 
-**Expected output:**
-- PostgreSQL listening on `localhost:5432`
-- API running on `http://localhost:5000`
-- Swagger UI available at `http://localhost:5000/swagger`
-
-### Database Access (Optional)
+### Check logs if containers don't start:
 ```bash
-docker exec -it subscription_tracker_db psql -U admin -d subscription_tracker
+# View API logs
+docker compose logs api
 
-# Inside psql:
-\dt                    # List tables
-\d users               # Describe users table
-SELECT * FROM users;   # Query users
+# View PostgreSQL logs
+docker compose logs db
+
+# Full logs with timestamp
+docker compose logs -f --timestamps
+```
+
+### Wait for PostgreSQL to be ready:
+```bash
+# Check healthcheck status (wait ~10 seconds)
+for i in {1..30}; do
+  docker exec subscription_tracker_db pg_isready -U admin && break
+  sleep 1
+done
+
+echo "Database ready!"
+```
+
+**Expected after ~10 seconds:**
+- PostgreSQL listening on `localhost:5432`
+- API running on `http://localhost:5000/swagger`
+- API accepting requests
+
+---
+
+## Step 3: Test API Endpoints (From Curl/Postman)
+
+### 3.1 Check API is alive:
+```bash
+curl -i http://localhost:5000/swagger
+# Should return 200 OK with HTML
+```
+
+### 3.2 Test Registration:
+```bash
+RESPONSE=$(curl -s -X POST http://localhost:5000/api/auth/register \
+  -H "Content-Type: application/json" \
+  -d '{
+    "email":"testuser@example.com",
+    "password":"SecurePass123",
+    "confirmPassword":"SecurePass123"
+  }')
+
+echo "$RESPONSE"
+# Expected output:
+# {
+#   "token": "eyJhbGciOiJIUzI1NiIs...",
+#   "user": {"id": 1, "email": "testuser@example.com"}
+# }
+```
+
+### 3.3 Extract and save token:
+```bash
+TOKEN=$(echo "$RESPONSE" | grep -o '"token":"[^"]*' | cut -d'"' -f4)
+echo "Token saved: $TOKEN"
+```
+
+### 3.4 Test Protected Endpoint (Get Subscriptions):
+```bash
+curl -X GET http://localhost:5000/api/subscriptions \
+  -H "Authorization: Bearer $TOKEN" \
+  -w "\nStatus: %{http_code}\n"
+
+# Expected: 200 OK, empty array: []
+```
+
+### 3.5 Create a Subscription:
+```bash
+curl -X POST http://localhost:5000/api/subscriptions \
+  -H "Authorization: Bearer $TOKEN" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "serviceName": "Netflix",
+    "category": "Entertainment",
+    "amount": 15.99,
+    "billingCycle": "Monthly",
+    "nextBillingDate": "2026-05-01T00:00:00Z",
+    "isActive": true,
+    "paymentMethod": "Credit Card",
+    "notes": "Family plan"
+  }'
+
+# Expected: 201 Created with subscription ID
+```
+
+### 3.6 Verify subscription was created:
+```bash
+curl -X GET http://localhost:5000/api/subscriptions \
+  -H "Authorization: Bearer $TOKEN"
+
+# Should show the Netflix subscription in the array
 ```
 
 ---
 
-## Step 2: Build & Run MAUI Frontend
+## Step 4: Build & Run MAUI Frontend
 
-In the project root:
-
+### Option A: Command line:
 ```bash
+# From project root (NOT the API folder)
+cd /home/sabo/GIT/Subscription_tracker
+
 # Restore NuGet packages
+dotnet restore
 
-# Build the MAUI app
-dotnet build -f net10.0-android
+# Build for Android
+dotnet build Subscription_tracker.csproj -f net10.0-android
 
-# Run the app (Android emulator)
+# If you have Android emulator running:
 dotnet run -f net10.0-android
 ```
 
-Or from **Visual Studio**:
+### Option B: Visual Studio / VS Code:
 1. Open `Subscription_tracker.sln`
-2. Set **Subscription_tracker** as startup project
-3. Select target (Android emulator)
+2. Select **Subscription_tracker** project (not the API)
+3. Choose target: **Android Emulator** (or connected device)
 4. Press `F5` or click **Run**
+
+### If no emulator available:
+```bash
+# List available emulators
+emulator -list-avds
+
+# Start an emulator
+emulator -avd Pixel_API_36 &
+
+# Then run the app
+dotnet run -f net10.0-android
+```
+
+**Note for Android Emulator**:
+- If API calls fail, your `Services/ApiService.cs` may need adjustment
+- Emulator uses `http://10.0.2.2:5000` to access host localhost
+- Device uses `http://<your-pc-ip>:5000`
 
 ---
 
-## Step 3: Test the MVP
+## Step 5: End-to-End Test in MAUI App
 
-### 3.1 Register a New User
-1. App launches → **Login Page**
-2. Click **"Register"**
-3. Enter:
-   - Email: `test@example.com`
-   - Password: `Password123!`
-   - Confirm Password: `Password123!`
-4. Click **Register**
-5. → Redirects to **MainPage** (authenticated)
+### 5.1 Launch & Register
+1. **App starts** → **Login Page** appears
+2. Click **"Register"** link
+3. **Register Page**:
+   - Email: `testuser@example.com`
+   - Password: `SecurePass123`
+   - Confirm: `SecurePass123`
+   - Click **Register**
+4. **Expected**: App navigates to **MainPage** (authenticated)
 
-### 3.2 Add a Subscription
-1. On **MainPage**, click **"+"** button (top-right)
-2. Fill in form:
+### 5.2 Add First Subscription
+1. On **MainPage**, click **"+"** button (add subscription)
+2. **Add Subscription Page**:
    - Service Name: `Netflix`
    - Category: `Entertainment`
    - Amount: `15.99`
    - Billing Cycle: `Monthly`
-   - Next Billing Date: (tomorrow)
+   - Next Billing Date: *(auto-set to tomorrow)*
+   - Payment Method: `Credit Card`
    - Notes: `Family plan`
-3. Click **Save**
-4. Subscription appears in list
-5. Monthly total updates dynamically
+   - Click **Save**
+3. **Expected**:
+   - Subscription appears in list
+   - Monthly total updates: `$15.99`
+   - Count shows: `1 active`
 
-### 3.3 Test Search & Filter
-- **Search Bar**: Type "Net" → filters to Netflix
-- **Billing Cycle Filter**: Select "Monthly" → shows only monthly subs
+### 5.3 Add More Subscriptions
+Repeat, adding:
+- **Spotify**: $9.99 Monthly
+- **Adobe CC**: $54.99 Monthly
 
-### 3.4 Test Offline Sync
-1. **Online state**: Add a subscription → syncs to API + saved locally
-2. **Offline state**:
-   - Disconnect internet (dev tools or airplane mode)
+**Expected**: Dashboard shows ~$80 monthly total
+
+### 5.4 Test Search
+1. In search bar, type `Net`
+2. List filters to show only Netflix
+3. Clear search → shows all again
+
+### 5.5 Test Filter by Billing Cycle
+1. **Billing Cycle Picker** → Select `Monthly`
+2. Shows all monthly subscriptions
+3. Select `Biweekly` (if any exist) → shows only those
+
+### 5.6 Test Delete
+1. Tap/long-press a subscription in the list
+2. Action sheet appears → **Delete**
+3. Confirm: `Yes, delete this subscription`
+4. Subscription removed from list
+
+### 5.7 Test Offline Sync
+1. **Online**: Add a subscription → confirms immediately
+2. **Offline** (disable WiFi):
+   - Status indicator shows "**Offline**" (orange)
    - Add another subscription
-   - Changes saved locally (pending sync)
-3. **Re-connect**:
-   - Restore internet
-   - App auto-syncs pending changes to API
+   - Changes saved locally
+3. **Re-connect** (enable internet):
+   - Status changes to "**Online**" (green)
+   - App auto-syncs pending changes
    - Data refreshes from server
-
-### 3.5 Delete Subscription
-1. Long-tap or select a subscription
-2. Choose "Delete" from action sheet
-3. Confirm deletion
-4. Subscription removed
 
 ---
 
-## API Testing (Postman)
+## API Testing with curl / Postman
 
-### 1. Register User
-```
-POST http://localhost:5000/api/auth/register
-Content-Type: application/json
+### Save token for reuse:
+```bash
+# After registration or login, save the token
+TOKEN="eyJhbGciOiJIUzI1NiIs..."
 
-{
-  "email": "user@test.com",
-  "password": "Password123!",
-  "confirmPassword": "Password123!"
-}
-
-Response:
-{
-  "token": "eyJhbGciOiJIUzI1NiIs...",
-  "user": {
-    "id": 1,
-    "email": "user@test.com"
-  }
-}
+# Or extract it:
+TOKEN=$(curl -s -X POST http://localhost:5000/api/auth/login \
+  -H "Content-Type: application/json" \
+  -d '{"email":"testuser@example.com","password":"SecurePass123"}' \
+  | grep -o '"token":"[^"]*' | cut -d'"' -f4)
 ```
 
-### 2. Login
-```
-POST http://localhost:5000/api/auth/login
-Content-Type: application/json
+### Test endpoints:
 
-{
-  "email": "user@test.com",
-  "password": "Password123!"
-}
-```
-
-### 3. Get Subscriptions (Protected)
-```
-GET http://localhost:5000/api/subscriptions
-Authorization: Bearer <token_from_login>
+**1. POST /api/auth/register**
+```bash
+curl -X POST http://localhost:5000/api/auth/register \
+  -H "Content-Type: application/json" \
+  -d '{
+    "email":"newuser@test.com",
+    "password":"Test123",
+    "confirmPassword":"Test123"
+  }'
 ```
 
-### 4. Create Subscription
+**2. POST /api/auth/login**
+```bash
+curl -X POST http://localhost:5000/api/auth/login \
+  -H "Content-Type: application/json" \
+  -d '{
+    "email":"testuser@example.com",
+    "password":"SecurePass123"
+  }'
 ```
-POST http://localhost:5000/api/subscriptions
-Authorization: Bearer <token>
-Content-Type: application/json
 
-{
-  "serviceName": "Spotify",
-  "category": "Music",
-  "amount": 9.99,
-  "billingCycle": "Monthly",
-  "nextBillingDate": "2026-05-01T00:00:00Z",
-  "isActive": true,
-  "paymentMethod": "Credit Card",
-  "notes": "Personal account"
-}
+**3. GET /api/subscriptions** (Protected)
+```bash
+curl -X GET http://localhost:5000/api/subscriptions \
+  -H "Authorization: Bearer $TOKEN"
+```
+
+**4. POST /api/subscriptions** (Protected)
+```bash
+curl -X POST http://localhost:5000/api/subscriptions \
+  -H "Authorization: Bearer $TOKEN" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "serviceName":"Hulu",
+    "category":"Entertainment",
+    "amount":7.99,
+    "billingCycle":"Monthly",
+    "nextBillingDate":"2026-05-15T00:00:00Z",
+    "isActive":true,
+    "paymentMethod":"Credit Card"
+  }'
+```
+
+**5. PUT /api/subscriptions/{id}** (Protected)
+```bash
+curl -X PUT http://localhost:5000/api/subscriptions/1 \
+  -H "Authorization: Bearer $TOKEN" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "serviceName":"Netflix Premium",
+    "category":"Entertainment",
+    "amount":19.99,
+    "billingCycle":"Monthly",
+    "nextBillingDate":"2026-05-01T00:00:00Z",
+    "isActive":true
+  }'
+```
+
+**6. DELETE /api/subscriptions/{id}** (Protected)
+```bash
+curl -X DELETE http://localhost:5000/api/subscriptions/1 \
+  -H "Authorization: Bearer $TOKEN"
+
+# Expected: 200 OK or 204 No Content
+```
+
+---
+
+## Database Access (Optional)
+
+### Connect directly to PostgreSQL:
+```bash
+docker exec -it subscription_tracker_db psql -U admin -d subscription_tracker
+
+# Inside psql:
+\dt                              # List all tables
+\d users                         # Show users table structure
+\d subscriptions                 # Show subscriptions table structure
+
+SELECT * FROM users;             # List all users
+SELECT * FROM subscriptions;     # List all subscriptions
+SELECT COUNT(*) FROM subscriptions;  # Count subscriptions
+
+# Exit
+\q
+```
+
+### Backup & Restore:
+```bash
+# Backup database
+docker exec subscription_tracker_db pg_dump -U admin -d subscription_tracker > backup.sql
+
+# Restore from backup
+docker exec -i subscription_tracker_db psql -U admin -d subscription_tracker < backup.sql
 ```
 
 ---
@@ -203,69 +437,166 @@ Content-Type: application/json
 
 ### Docker Issues
 
-**Error: `Connection refused`**
+**Error: `Connection refused` connecting to `localhost:5000`**
 ```bash
-# Ensure Docker is running
-docker ps
+# Verify containers are running
+docker compose ps
 
-# Restart containers
-docker-compose restart
+# If API is not running:
+docker compose up -d
 
-# Check logs
-docker-compose logs api
+# Check why it exited:
+docker compose logs api --tail=100
 ```
 
-**PostgreSQL connection failed**
+**Error: `PostgreSQL connection timeout`**
 ```bash
-# Wait for healthcheck to pass (may take 10 seconds)
-docker-compose logs postgres | grep "ready to accept"
+# Wait for healthcheck (may take 10-15 seconds)
+docker compose ps
+# If still "starting", wait more
 
-# Force recreate
-docker-compose down -v
-docker-compose up -d
+# Restart if needed:
+docker compose restart db
+docker compose restart api
 ```
 
-### MAUI Build Errors
-
-**Missing Android SDK**
+**Error: `Port 5000 already in use`**
 ```bash
-dotnet sdk check
-dotnet workload repair
-dotnet workload install android
-```
-
-**Port 5000 already in use**
-```bash
-# Find process using port
+# Find what's using port 5000
 lsof -i :5000
 
 # Kill process
 kill -9 <PID>
 
-# Or use different port in appsettings.json
+# Or change port in docker-compose.yml:
+# ports: "5001:8080"  # Use 5001 instead
 ```
 
-### API Errors
+### MAUI Build Errors
 
-**JWT Token Invalid**
-- Ensure token is fresh (not expired)
-- Check `Jwt:SecretKey` in `appsettings.json`
+**Error: `Cannot find TargetFramework net10.0-android`**
+```bash
+# Install/repair MAUI workload
+dotnet workload install maui
+dotnet workload install android
 
-**CORS Error**
-- Verify `AllowLocalhost` CORS policy in `Program.cs`
-- Add device/emulator IP if not localhost
+# Or repair
+dotnet workload repair
+```
+
+**Error: `API calls return 401 Unauthorized`**
+1. Token may be expired (24-hour expiry)
+2. Try registering/logging in again
+3. Check token is in Authorization header: `Bearer <token>`
+
+**Error: `CORS error` or `Connection refused from app`**
+- On **Android emulator**: Change AP URL from `localhost` to `10.0.2.2` (special host alias)
+- On **physical device**: Use your PC's IP address, e.g., `http://192.168.1.100:5000`
+- Edit `Services/ApiService.cs` _baseUrl
+
+### API Connection Issues
+
+**From MAUI app: API calls fail with `Connection refused`**
+1. Verify API URL in `Services/ApiService.cs`
+2. For emulator: `http://10.0.2.2:5000`
+3. For device: `http://<your-pc-ip>:5000`
+4. Check firewall isn't blocking port 5000
+
+**Fix for Android Emulator**:
+```csharp
+// In Services/ApiService.cs
+var baseUrl = DeviceInfo.Platform == DevicePlatform.Android
+    ? "http://10.0.2.2:5000"   // Emulator special alias
+    : "http://localhost:5000";  // Desktop
+```
 
 ---
 
 ## Key Features Implemented
 
-✅ **Authentication**: JWT-based login/register
-✅ **CRUD Operations**: Create, read, update, delete subscriptions
-✅ **Offline Support**: Local SQLite storage + sync queue
+✅ **Authentication**: JWT token-based login/register
+✅ **CRUD**: Create, read, update, delete subscriptions
+✅ **Offline Support**: Local SQLite cache + sync queue
 ✅ **Auto-sync**: Pending changes sync when connection restored
-✅ **Search & Filter**: By service name, billing cycle
+✅ **Search & Filter**: By service name, billing cycle, category
 ✅ **Responsive UI**: Mobile-first MAUI design
-✅ **Docker**: PostgreSQL + API in containers
+✅ **Docker**: PostgreSQL + .NET API in containers
+✅ **API Docs**: Swagger UI at `http://localhost:5000/swagger`
+
+---
+
+## Architecture Overview
+
+```
+┌──────────────────────────┐
+│   MAUI Android App       │
+│  (C# XAML + Services)    │
+└────────────┬─────────────┘
+             │ HTTP(S)
+             │ (JWT Bearer Token)
+             ↓
+┌──────────────────────────────────┐
+│  ASP.NET Core 10.0 API           │
+│  - AuthController                │
+│  - SubscriptionsController       │
+│  - JWT Bearer auth               │
+└────────────┬─────────────────────┘
+             │ (EF Core)
+             ↓
+┌──────────────────────────────────┐
+│  PostgreSQL 16 (Docker)          │
+│  - Users table                   │
+│  - Subscriptions table           │
+└──────────────────────────────────┘
+```
+
+**Offline Flow:**
+```
+MAUI (offline)
+  ↓
+LocalStorageService (SQLite)
+  ↓
+Pending changes queue (JSON file)
+  ↓
+(connection restored)
+  ↓
+SyncService (auto-triggers)
+  ↓
+API (/api/subscriptions/sync)
+  ↓
+PostgreSQL (updates synced)
+```
+
+---
+
+## Environment & Configuration
+
+### API Config (`Subscription_tracker.API/appsettings.json`):
+```json
+{
+  "ConnectionStrings": {
+    "DefaultConnection": "Server=postgres;Port=5432;Database=subscription_tracker;User Id=admin;Password=subscription_tracker_dev;"
+  },
+  "Jwt": {
+    "SecretKey": "your-super-secret-key-here-at-least-32-characters",
+    "Issuer": "subscription-tracker-api",
+    "Audience": "subscription-tracker-app",
+    "ExpirationMinutes": 1440
+  }
+}
+```
+
+### MAUI Config (`Services/ApiService.cs`):
+```csharp
+// Default for localhost development:
+_baseUrl = "http://localhost:5000";
+
+// For Android emulator:
+_baseUrl = "http://10.0.2.2:5000";
+
+// For production deployed API:
+_baseUrl = "https://api.subscription-tracker.com";
+```
 
 ---
 
@@ -276,62 +607,15 @@ kill -9 <PID>
 - 💾 Export to PDF/CSV
 - 🌙 Dark mode theme
 - 🔄 Multi-device sync
-- 👥 Shared subscriptions (family plans)
+- 👥 Shared subscriptions
 
 ---
 
-## Environment Variables & Configuration
+## Support & Resources
 
-**API Configuration** (`appsettings.json`):
-```json
-{
-  "ConnectionStrings": {
-    "DefaultConnection": "Server=postgres;Port=5432;Database=subscription_tracker;..."
-  },
-  "Jwt": {
-    "SecretKey": "your-secret-key-here",
-    "Issuer": "subscription-tracker-api",
-    "Audience": "subscription-tracker-app",
-    "ExpirationMinutes": 1440
-  }
-}
-```
-
-**MAUI Configuration**:
-- API Base URL: `http://localhost:5000` (in `ApiService.cs`)
-- Modify for production endpoints
-
----
-
-## Architecture Overview
-
-```
-┌─────────────────┐
-│   MAUI App      │  ← Frontend (Android/iOS native)
-│  (C#/XAML)      │
-└────────┬────────┘
-         │ HTTP(S)
-         ↓
-┌──────────────────────────┐
-│  ASP.NET Core API        │
-│  (JWT Auth Protected)    │
-└────────┬─────────────────┘
-         │
-         ↓
-┌──────────────────────────┐
-│  PostgreSQL Database     │
-│  (Docker Container)      │
-└──────────────────────────┘
-```
-
-**Flow**: MAUI ← (API calls) → Backend ← (EF Core) → PostgreSQL
-
----
-
-## Support
-
-For issues or questions, refer to:
-- Plan: `/home/sabo/.claude/plans/linked-soaring-wolf.md`
-- Backend logs: `docker-compose logs api`
-- Frontend logs: Visual Studio Output window
-- API Swagger: `http://localhost:5000/swagger`
+- **Complete Plan**: `/home/sabo/.claude/plans/linked-soaring-wolf.md`
+- **API Logs**: `docker compose logs -f api`
+- **App Logs**: Visual Studio Output / Device logcat
+- **DB Access**: `docker exec -it subscription_tracker_db psql -U admin`
+- **Swagger Docs**: `http://localhost:5000/swagger`
+- **Docker Status**: `docker compose ps`
