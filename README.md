@@ -277,18 +277,3 @@ This is an educational MVP project. Contributions are welcome for:
 
 Project for educational purposes.
 
-## 🔗 Resources
-
-- [.NET MAUI Documentation](https://learn.microsoft.com/en-us/dotnet/maui/)
-- [ASP.NET Core Docs](https://learn.microsoft.com/en-us/aspnet/core/)
-- [Entity Framework Core](https://learn.microsoft.com/en-us/ef/core/)
-- [JWT Authentication](https://jwt.io/)
-- [Docker Documentation](https://docs.docker.com/)
-
-## 📞 Support
-
-For detailed setup and troubleshooting, see [SETUP.md](./SETUP.md).
-
----
-
-**Built with ❤️ for subscription management**
