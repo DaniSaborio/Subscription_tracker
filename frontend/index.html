@@ -1,0 +1,103 @@
+<!DOCTYPE html>
+<html lang="es">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Subscription Tracker PWA</title>
+    <link rel="stylesheet" href="./styles.css" />
+    <link rel="manifest" href="./manifest.json" />
+    <link rel="icon" href="data:," />
+  </head>
+
+  <body>
+    <header class="app-header">
+      <h1>Subscription Tracker</h1>
+      <p id="netStatus" class="net online">Online</p>
+    </header>
+
+    <main class="container">
+      <section id="authSection" class="card-block">
+        <h2>Acceso</h2>
+        <div class="grid-2">
+          <input id="emailInput" type="email" placeholder="Email" />
+          <input id="passwordInput" type="password" placeholder="Password" />
+        </div>
+        <div class="row-actions">
+          <button id="loginBtn" class="primary">Login</button>
+          <button id="registerBtn" class="ghost">Register</button>
+        </div>
+        <p id="authStatus" class="status-text">Sin sesion activa.</p>
+      </section>
+
+      <section id="appSection" class="hidden">
+        <section class="card-block">
+          <div class="row-between">
+            <h2>Resumen</h2>
+            <button id="logoutBtn" class="ghost">Logout</button>
+          </div>
+          <div class="summary-grid">
+            <article class="summary-card">
+              <p class="summary-label">Mensual estimado</p>
+              <p id="monthlyTotal" class="summary-value">$0.00</p>
+            </article>
+            <article class="summary-card">
+              <p class="summary-label">Anual estimado</p>
+              <p id="yearlyTotal" class="summary-value">$0.00</p>
+            </article>
+            <article class="summary-card">
+              <p class="summary-label">Cobros proximos (30 dias)</p>
+              <p id="upcomingCount" class="summary-value">0</p>
+            </article>
+          </div>
+          <p id="cycleTotals" class="status-text">Totales por ciclo: -</p>
+        </section>
+
+        <section class="card-block">
+          <h2>Nueva suscripcion</h2>
+          <div class="grid-2">
+            <input id="nameInput" type="text" placeholder="Nombre" />
+            <input id="categoryInput" type="text" placeholder="Categoria" />
+            <select id="cycleInput">
+              <option value="monthly">Monthly</option>
+              <option value="yearly">Yearly</option>
+              <option value="weekly">Weekly</option>
+              <option value="biweekly">Biweekly</option>
+              <option value="quarterly">Quarterly</option>
+            </select>
+            <input id="amountInput" type="number" min="0" step="0.01" placeholder="Monto" />
+            <input id="currencyInput" type="text" placeholder="Moneda (USD)" value="USD" />
+            <input id="nextBillingInput" type="date" />
+          </div>
+          <textarea id="notesInput" rows="2" placeholder="Notas (opcional)"></textarea>
+          <button id="addBtn" class="primary">Agregar suscripcion</button>
+        </section>
+
+        <section class="card-block">
+          <h2>Busqueda y filtros</h2>
+          <div class="grid-3">
+            <input id="searchInput" type="text" placeholder="Buscar por nombre o categoria" />
+            <input id="filterCategoryInput" type="text" placeholder="Filtrar categoria" />
+            <select id="filterCycleInput">
+              <option value="">Todos los ciclos</option>
+              <option value="monthly">Monthly</option>
+              <option value="yearly">Yearly</option>
+              <option value="weekly">Weekly</option>
+              <option value="biweekly">Biweekly</option>
+              <option value="quarterly">Quarterly</option>
+            </select>
+          </div>
+        </section>
+
+        <section class="card-block">
+          <div class="row-actions">
+            <button id="syncBtn" class="ghost">Sincronizar pendientes</button>
+          </div>
+          <p id="syncStatus" class="status-text">Sincronizacion en espera.</p>
+          <div id="list" class="list"></div>
+        </section>
+      </section>
+    </main>
+
+    <script type="module" src="./app.js"></script>
+  </body>
+</html>

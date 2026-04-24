@@ -1,0 +1,8 @@
+{
+  "name": "Subscription Tracker PWA",
+  "short_name": "SubsTracker",
+  "start_url": ".",
+  "display": "standalone",
+  "background_color": "#f3f4ef",
+  "theme_color": "#0f766e"
+}

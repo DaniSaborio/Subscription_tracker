@@ -1,0 +1,229 @@
+:root {
+  --bg: #f3f4ef;
+  --paper: #fffefa;
+  --ink: #11212d;
+  --muted: #5f6d76;
+  --brand: #0f766e;
+  --brand-strong: #115e59;
+  --danger: #b42318;
+  --ok: #067647;
+  --border: #d3ddd6;
+}
+
+* {
+  box-sizing: border-box;
+}
+
+body {
+  margin: 0;
+  font-family: "Trebuchet MS", "Segoe UI", sans-serif;
+  background:
+    radial-gradient(circle at top left, #d8ebe5, transparent 40%),
+    radial-gradient(circle at bottom right, #f9f0d8, transparent 35%),
+    var(--bg);
+  color: var(--ink);
+}
+
+.app-header {
+  padding: 18px 16px;
+  border-bottom: 1px solid var(--border);
+  background: rgba(255, 254, 250, 0.92);
+  backdrop-filter: blur(4px);
+  position: sticky;
+  top: 0;
+}
+
+h1,
+h2,
+p {
+  margin: 0;
+}
+
+h1 {
+  font-size: 1.45rem;
+}
+
+h2 {
+  font-size: 1.1rem;
+  margin-bottom: 12px;
+}
+
+.container {
+  max-width: 980px;
+  margin: 0 auto;
+  padding: 18px 14px 36px;
+  display: grid;
+  gap: 14px;
+}
+
+.card-block {
+  background: var(--paper);
+  border: 1px solid var(--border);
+  border-radius: 16px;
+  padding: 14px;
+  box-shadow: 0 8px 20px rgba(17, 33, 45, 0.04);
+}
+
+.net {
+  margin-top: 6px;
+  font-size: 0.9rem;
+  color: var(--muted);
+}
+
+.net.online {
+  color: var(--ok);
+}
+
+.net.offline {
+  color: var(--danger);
+}
+
+input,
+select,
+textarea,
+button {
+  width: 100%;
+  border-radius: 10px;
+  border: 1px solid var(--border);
+  padding: 10px 12px;
+  font: inherit;
+}
+
+input,
+select,
+textarea {
+  background: white;
+  color: var(--ink);
+}
+
+button {
+  cursor: pointer;
+  background: #f4f7f4;
+}
+
+button.primary {
+  background: var(--brand);
+  color: #ffffff;
+  border-color: var(--brand);
+  font-weight: 700;
+}
+
+button.primary:hover {
+  background: var(--brand-strong);
+}
+
+button.ghost {
+  background: transparent;
+}
+
+.hidden {
+  display: none;
+}
+
+.grid-2 {
+  display: grid;
+  gap: 8px;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+}
+
+.grid-3 {
+  display: grid;
+  gap: 8px;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+}
+
+.row-actions {
+  margin-top: 10px;
+  display: flex;
+  gap: 8px;
+}
+
+.row-between {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.status-text {
+  margin-top: 8px;
+  font-size: 0.9rem;
+  color: var(--muted);
+}
+
+.summary-grid {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 8px;
+}
+
+.summary-card {
+  background: linear-gradient(140deg, #eef8f5, #fcf8ea);
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  padding: 10px;
+}
+
+.summary-label {
+  color: var(--muted);
+  font-size: 0.84rem;
+}
+
+.summary-value {
+  margin-top: 6px;
+  font-size: 1.1rem;
+  font-weight: 700;
+}
+
+.list {
+  margin-top: 10px;
+  display: grid;
+  gap: 8px;
+}
+
+.subscription-card {
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  padding: 10px;
+  background: #ffffff;
+}
+
+.subscription-top {
+  display: flex;
+  justify-content: space-between;
+  gap: 8px;
+}
+
+.subscription-name {
+  font-size: 1rem;
+  font-weight: 700;
+}
+
+.subscription-meta {
+  margin-top: 6px;
+  font-size: 0.9rem;
+  color: var(--muted);
+}
+
+.subscription-actions {
+  margin-top: 10px;
+  display: flex;
+  gap: 8px;
+}
+
+.danger {
+  color: var(--danger);
+  border-color: #f3c5c0;
+}
+
+.pending-badge {
+  font-size: 0.76rem;
+  color: #9a5a00;
+}
+
+@media (max-width: 740px) {
+  .grid-2,
+  .grid-3,
+  .summary-grid {
+    grid-template-columns: 1fr;
+  }
+}
