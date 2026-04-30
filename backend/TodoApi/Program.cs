@@ -100,6 +100,24 @@ app.UseCors("AllowLocalPwa");
 app.UseAuthentication();
 app.UseAuthorization();
 
+// Health check endpoint (sin autenticación) - intenta conectar a DB
+app.MapMethods("/health", new[] { "GET", "HEAD" }, async (ISubscriptionRepository repo) =>
+{
+    try
+    {
+        // Intenta una query simple para verificar DB
+        _ = await repo.GetAllAsync(Guid.Empty, null, null, null, null);
+        return Results.Ok(new { status = "ok", database = "connected" });
+    }
+    catch
+    {
+        // DB no disponible, pero API sigue corriendo (fallback activo)
+        return Results.StatusCode(503); // Service Unavailable
+    }
+})
+    .WithName("Health")
+    .AllowAnonymous();
+
 app.MapControllers();
 
 app.Run();

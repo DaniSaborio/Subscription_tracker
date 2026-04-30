@@ -8,6 +8,9 @@ public static class InMemoryAppStore
     private static readonly object Sync = new();
     private static readonly List<UserAccount> Users = new();
     private static readonly List<SubscriptionItem> Subscriptions = new();
+    private static readonly List<SubscriptionShare> Shares = new();
+
+    private sealed record SubscriptionShare(Guid SubscriptionId, Guid SharedWithUserId, Guid SharedByUserId, DateTime CreatedAt);
 
     static InMemoryAppStore()
     {
@@ -105,7 +108,7 @@ public static class InMemoryAppStore
     {
         lock (Sync)
         {
-            return Subscriptions.Where(s => s.UserId == userId).Select(CloneSubscription).ToList();
+            return GetAccessibleSubscriptions(userId).ToList();
         }
     }
 
@@ -113,8 +116,7 @@ public static class InMemoryAppStore
     {
         lock (Sync)
         {
-            var item = Subscriptions.FirstOrDefault(s => s.UserId == userId && s.Id == id);
-            return item is null ? null : CloneSubscription(item);
+            return GetAccessibleSubscriptions(userId).FirstOrDefault(s => s.Id == id);
         }
     }
 
@@ -177,14 +179,82 @@ public static class InMemoryAppStore
             }
 
             Subscriptions.Remove(item);
+            Shares.RemoveAll(share => share.SubscriptionId == id);
             return true;
         }
     }
 
-    private static SubscriptionItem CloneSubscription(SubscriptionItem item) => new()
+    public static bool ShareSubscription(Guid ownerUserId, Guid subscriptionId, Guid sharedWithUserId, string sharedWithEmail)
+    {
+        lock (Sync)
+        {
+            var item = Subscriptions.FirstOrDefault(s => s.UserId == ownerUserId && s.Id == subscriptionId);
+            if (item is null || ownerUserId == sharedWithUserId)
+            {
+                return false;
+            }
+
+            if (Shares.Any(share => share.SubscriptionId == subscriptionId && share.SharedWithUserId == sharedWithUserId))
+            {
+                return false;
+            }
+
+            Shares.Add(new SubscriptionShare(subscriptionId, sharedWithUserId, ownerUserId, DateTime.UtcNow));
+            return true;
+        }
+    }
+
+    public static bool RevokeShare(Guid ownerUserId, Guid subscriptionId, Guid sharedWithUserId)
+    {
+        lock (Sync)
+        {
+            var item = Subscriptions.FirstOrDefault(s => s.UserId == ownerUserId && s.Id == subscriptionId);
+            if (item is null)
+            {
+                return false;
+            }
+
+            var share = Shares.FirstOrDefault(x => x.SubscriptionId == subscriptionId && x.SharedWithUserId == sharedWithUserId);
+            if (share is null)
+            {
+                return false;
+            }
+
+            Shares.Remove(share);
+            return true;
+        }
+    }
+
+    public static IEnumerable<TodoApi.Models.SubscriptionShareDto> GetShares(Guid ownerUserId, Guid subscriptionId)
+    {
+        lock (Sync)
+        {
+            var item = Subscriptions.FirstOrDefault(s => s.UserId == ownerUserId && s.Id == subscriptionId);
+            if (item is null)
+            {
+                return Enumerable.Empty<TodoApi.Models.SubscriptionShareDto>();
+            }
+
+            var result = from share in Shares
+                         where share.SubscriptionId == subscriptionId
+                         join user in Users on share.SharedWithUserId equals user.Id
+                         select new TodoApi.Models.SubscriptionShareDto
+                         {
+                             SharedWithUserId = user.Id,
+                             SharedWithEmail = user.Email,
+                             CreatedAt = share.CreatedAt
+                         };
+
+            return result.ToList();
+        }
+    }
+
+    private static SubscriptionItem CloneSubscription(SubscriptionItem item, bool isOwner = true, string? sharedByEmail = null) => new()
     {
         Id = item.Id,
         UserId = item.UserId,
+        IsOwner = isOwner,
+        SharedByEmail = sharedByEmail,
         Name = item.Name,
         Category = item.Category,
         BillingCycle = item.BillingCycle,
@@ -195,4 +265,19 @@ public static class InMemoryAppStore
         CreatedAt = item.CreatedAt,
         UpdatedAt = item.UpdatedAt
     };
+
+    private static List<SubscriptionItem> GetAccessibleSubscriptions(Guid userId)
+    {
+        var owned = Subscriptions
+            .Where(subscription => subscription.UserId == userId)
+            .Select(subscription => CloneSubscription(subscription));
+
+        var shared = from share in Shares
+                      where share.SharedWithUserId == userId
+                      join subscription in Subscriptions on share.SubscriptionId equals subscription.Id
+                      join owner in Users on subscription.UserId equals owner.Id
+                      select CloneSubscription(subscription, false, owner.Email);
+
+        return owned.Concat(shared).OrderBy(x => x.NextBillingDate).ThenByDescending(x => x.UpdatedAt).ToList();
+    }
 }

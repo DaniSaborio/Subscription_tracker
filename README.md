@@ -12,7 +12,7 @@ Este proyecto fue migrado de ToDo a Subscription Tracker con soporte offline.
 - Docker para levantar la base de datos PostgreSQL
 
 ## Estructura principal
-- `backend/TodoApi`: backend .NET 8 API
+- `backend/TodoApi`: backend .NET 10 API
 - `frontend`: frontend PWA (HTML/CSS/JS + IndexedDB + Service Worker)
 
 ## Proceso de migracion (documentado)

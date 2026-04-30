@@ -4,6 +4,8 @@ public class SubscriptionItem
 {
     public Guid Id { get; set; }
     public Guid UserId { get; set; }
+    public bool IsOwner { get; set; } = true;
+    public string? SharedByEmail { get; set; }
     public string Name { get; set; } = string.Empty;
     public string Category { get; set; } = string.Empty;
     public string BillingCycle { get; set; } = "monthly";

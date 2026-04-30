@@ -3,7 +3,7 @@ VALUES
     (
         'aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa',
         'demo@tracker.app',
-        '$2a$11$MOCK_HASH_REPLACE_WITH_REGISTER',
+        'AAECAwQFBgcICQoLDA0ODw==',
         NOW()
     )
 ON CONFLICT (id) DO NOTHING;

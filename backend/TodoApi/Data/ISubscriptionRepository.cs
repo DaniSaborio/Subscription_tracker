@@ -10,4 +10,7 @@ public interface ISubscriptionRepository
     Task<SubscriptionItem> CreateAsync(Guid userId, CreateSubscriptionRequest request);
     Task<SubscriptionItem?> UpdateAsync(Guid userId, Guid id, UpdateSubscriptionRequest request);
     Task<bool> DeleteAsync(Guid userId, Guid id);
+    Task<bool> ShareAsync(Guid ownerUserId, Guid subscriptionId, Guid sharedWithUserId, string sharedWithEmail);
+    Task<bool> RevokeShareAsync(Guid ownerUserId, Guid subscriptionId, Guid sharedWithUserId);
+    Task<IEnumerable<TodoApi.Models.SubscriptionShareDto>> GetSharesAsync(Guid ownerUserId, Guid subscriptionId);
 }

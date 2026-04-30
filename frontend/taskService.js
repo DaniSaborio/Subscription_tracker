@@ -5,7 +5,10 @@ import {
   apiGetSummary,
   apiLogin,
   apiRegister,
+  apiRevokeSubscriptionShare,
+  apiShareSubscription,
   apiUpdateSubscription,
+  apiGetSubscriptionShares,
 } from "./api.js";
 import {
   dbClearPendingOps,
@@ -37,6 +40,8 @@ function normalizeSubscription(raw, isSynced = true) {
     currency: String(raw.currency || "USD").toUpperCase(),
     nextBillingDate: String(raw.nextBillingDate || new Date().toISOString().slice(0, 10)).slice(0, 10),
     notes: raw.notes || "",
+    isOwner: raw.isOwner !== false,
+    sharedByEmail: raw.sharedByEmail || "",
     updatedAt: raw.updatedAt ? new Date(raw.updatedAt).getTime() : Date.now(),
     synced: isSynced,
   };
@@ -109,7 +114,8 @@ export async function logout() {
 }
 
 export async function initSubscriptions() {
-  subscriptions = await dbGetAllSubscriptions();
+  const stored = await dbGetAllSubscriptions();
+  subscriptions = stored.map(item => normalizeSubscription(item, item.synced !== false));
   sortSubscriptions();
   return [...subscriptions];
 }
@@ -252,6 +258,33 @@ export async function deleteSubscription(id) {
     subscriptionId: id,
     createdAt: Date.now(),
   });
+}
+
+export async function shareSubscription(id, email) {
+  const token = getAuthToken();
+  if (!navigator.onLine) {
+    throw new Error("La comparticion requiere conexion.");
+  }
+
+  await apiShareSubscription(token, id, email);
+}
+
+export async function revokeSubscriptionShare(id, email) {
+  const token = getAuthToken();
+  if (!navigator.onLine) {
+    throw new Error("La comparticion requiere conexion.");
+  }
+
+  await apiRevokeSubscriptionShare(token, id, email);
+}
+
+export async function getSubscriptionShares(id) {
+  const token = getAuthToken();
+  if (!navigator.onLine) {
+    throw new Error("La operación requiere conexión.");
+  }
+
+  return await apiGetSubscriptionShares(token, id);
 }
 
 export async function syncPending() {

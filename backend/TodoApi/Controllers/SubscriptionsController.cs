@@ -21,10 +21,12 @@ public class SubscriptionsController : ControllerBase
     };
 
     private readonly ISubscriptionRepository _repository;
+    private readonly IUserRepository _userRepository;
 
-    public SubscriptionsController(ISubscriptionRepository repository)
+    public SubscriptionsController(ISubscriptionRepository repository, IUserRepository userRepository)
     {
         _repository = repository;
+        _userRepository = userRepository;
     }
 
     [HttpGet]
@@ -85,6 +87,102 @@ public class SubscriptionsController : ControllerBase
         }
 
         return Ok(item);
+    }
+
+    [HttpPost("{id:guid}/share")]
+    public async Task<IActionResult> Share(Guid id, [FromBody] ShareSubscriptionRequest request)
+    {
+        var email = request.Email?.Trim().ToLowerInvariant();
+        if (string.IsNullOrWhiteSpace(email))
+        {
+            return BadRequest(new { message = "El email del usuario a compartir es obligatorio." });
+        }
+
+        var ownerId = GetUserId();
+        var item = await _repository.GetByIdAsync(ownerId, id);
+        if (item is null)
+        {
+            return NotFound(new { message = "Suscripción no encontrada." });
+        }
+
+        if (!item.IsOwner)
+        {
+            return StatusCode(403, new { message = "Solo el propietario puede compartir esta suscripción." });
+        }
+
+        var targetUser = await _userRepository.GetByEmailAsync(email);
+        if (targetUser is null)
+        {
+            return NotFound(new { message = "No existe un usuario con ese email." });
+        }
+
+        if (targetUser.Id == ownerId)
+        {
+            return BadRequest(new { message = "No puedes compartir una suscripción contigo mismo." });
+        }
+
+        var shared = await _repository.ShareAsync(ownerId, id, targetUser.Id, targetUser.Email);
+        if (!shared)
+        {
+            return Conflict(new { message = "Esta suscripción ya estaba compartida con ese usuario." });
+        }
+
+        return NoContent();
+    }
+
+    [HttpDelete("{id:guid}/share")]
+    public async Task<IActionResult> RevokeShare(Guid id, [FromQuery] string email)
+    {
+        var normalizedEmail = email?.Trim().ToLowerInvariant();
+        if (string.IsNullOrWhiteSpace(normalizedEmail))
+        {
+            return BadRequest(new { message = "El email del usuario es obligatorio." });
+        }
+
+        var ownerId = GetUserId();
+        var item = await _repository.GetByIdAsync(ownerId, id);
+        if (item is null)
+        {
+            return NotFound(new { message = "Suscripción no encontrada." });
+        }
+
+        if (!item.IsOwner)
+        {
+            return StatusCode(403, new { message = "Solo el propietario puede revocar compartidos." });
+        }
+
+        var targetUser = await _userRepository.GetByEmailAsync(normalizedEmail);
+        if (targetUser is null)
+        {
+            return NotFound(new { message = "No existe un usuario con ese email." });
+        }
+
+        var revoked = await _repository.RevokeShareAsync(ownerId, id, targetUser.Id);
+        if (!revoked)
+        {
+            return NotFound(new { message = "No se encontró un compartido activo para ese usuario." });
+        }
+
+        return NoContent();
+    }
+
+    [HttpGet("{id:guid}/shares")]
+    public async Task<ActionResult<IEnumerable<SubscriptionShareDto>>> GetShares(Guid id)
+    {
+        var ownerId = GetUserId();
+        var item = await _repository.GetByIdAsync(ownerId, id);
+        if (item is null)
+        {
+            return NotFound(new { message = "Suscripción no encontrada." });
+        }
+
+        if (!item.IsOwner)
+        {
+            return StatusCode(403, new { message = "Solo el propietario puede ver los miembros compartidos." });
+        }
+
+        var shares = await _repository.GetSharesAsync(ownerId, id);
+        return Ok(shares);
     }
 
     [HttpPost]

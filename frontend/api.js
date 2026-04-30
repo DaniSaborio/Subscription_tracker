@@ -78,6 +78,26 @@ export async function apiDeleteSubscription(token, id) {
   });
 }
 
+export async function apiShareSubscription(token, id, email) {
+  return authorizedFetch(`${API_BASE}/subscriptions/${id}/share`, token, {
+    method: "POST",
+    body: JSON.stringify({ email }),
+  });
+}
+
+export async function apiRevokeSubscriptionShare(token, id, email) {
+  const encodedEmail = encodeURIComponent(email);
+  return authorizedFetch(`${API_BASE}/subscriptions/${id}/share?email=${encodedEmail}`, token, {
+    method: "DELETE",
+  });
+}
+
+export async function apiGetSubscriptionShares(token, id) {
+  return authorizedFetch(`${API_BASE}/subscriptions/${id}/shares`, token, {
+    method: "GET",
+  });
+}
+
 export async function apiGetSummary(token) {
   return authorizedFetch(`${API_BASE}/subscriptions/summary`, token, {
     method: "GET",

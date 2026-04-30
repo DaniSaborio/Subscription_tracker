@@ -220,6 +220,41 @@ button.ghost {
   color: #9a5a00;
 }
 
+.shared-badge {
+  display: inline-block;
+  margin-top: 8px;
+  font-size: 0.76rem;
+  color: var(--brand-strong);
+  background: #e8f4f2;
+  border: 1px solid #cfe7e2;
+  padding: 4px 8px;
+  border-radius: 999px;
+}
+
+button:disabled {
+  cursor: not-allowed;
+  opacity: 0.7;
+}
+
+/* Modal de compartidos */
+.modal.hidden { display: none; }
+.modal { position: fixed; inset: 0; z-index: 1200; }
+.modal-backdrop { position: absolute; inset: 0; background: rgba(0,0,0,0.45); }
+.modal-content {
+  position: relative;
+  max-width: 720px;
+  margin: 6vh auto;
+  background: var(--paper);
+  border-radius: 12px;
+  padding: 12px;
+  box-shadow: 0 12px 40px rgba(17,33,45,0.25);
+}
+.modal-header { display:flex; align-items:center; justify-content:space-between; gap:8px; }
+.modal-body { margin-top:12px; }
+.share-list { list-style:none; padding:0; margin:8px 0 0 0; }
+.share-list li { display:flex; align-items:center; justify-content:space-between; padding:8px; border-bottom:1px solid var(--border); }
+.share-list button { width:auto; padding:6px 10px; }
+
 @media (max-width: 740px) {
   .grid-2,
   .grid-3,

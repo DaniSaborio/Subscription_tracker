@@ -5,6 +5,7 @@ Backend del MVP de gestion de suscripciones para la PWA.
 ## Funcionalidades
 - Registro y login con JWT (`/auth/register`, `/auth/login`)
 - CRUD de suscripciones por usuario autenticado
+- Compartir suscripciones con otros usuarios registrados por email
 - Filtros por busqueda, categoria y ciclo de facturacion
 - Endpoint de proximos cobros
 - Endpoint de resumen con costo mensual y anual equivalente
@@ -28,6 +29,8 @@ Protegidos (Bearer token):
 - `POST /subscriptions`
 - `PUT /subscriptions/{id}`
 - `DELETE /subscriptions/{id}`
+- `POST /subscriptions/{id}/share`
+- `DELETE /subscriptions/{id}/share?email=usuario@correo.com`
 - `GET /subscriptions/upcoming?days=30`
 - `GET /subscriptions/summary`
 

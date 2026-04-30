@@ -61,7 +61,17 @@ public class AuthController : ControllerBase
             return Unauthorized(new { message = "Credenciales inválidas." });
         }
 
-        var verification = _passwordHasher.VerifyHashedPassword(user, user.PasswordHash, request.Password);
+        PasswordVerificationResult verification;
+        try
+        {
+            verification = _passwordHasher.VerifyHashedPassword(user, user.PasswordHash, request.Password);
+        }
+        catch (FormatException)
+        {
+            // Legacy or malformed hashes should not break login flow with 500 errors.
+            return Unauthorized(new { message = "Credenciales inválidas." });
+        }
+
         if (verification == PasswordVerificationResult.Failed)
         {
             return Unauthorized(new { message = "Credenciales inválidas." });

@@ -1,4 +1,5 @@
 using System.Data;
+using System.Text;
 using Dapper;
 using Npgsql;
 using TodoApi.Models;
@@ -48,10 +49,50 @@ public class SubscriptionRepository : ISubscriptionRepository
             return items.OrderBy(x => x.NextBillingDate).ThenByDescending(x => x.UpdatedAt);
         }
 
-        const string sql = @"
+        var sqlBuilder = new StringBuilder(@"
+            WITH accessible_subscriptions AS (
+                SELECT
+                    s.id,
+                    s.user_id,
+                    TRUE AS is_owner,
+                    NULL::text AS shared_by_email,
+                    s.name,
+                    s.category,
+                    s.billing_cycle,
+                    s.amount,
+                    s.currency,
+                    s.next_billing_date,
+                    s.notes,
+                    s.created_at,
+                    s.updated_at
+                FROM subscriptions s
+                WHERE s.user_id = @UserId
+
+                UNION ALL
+
+                SELECT
+                    s.id,
+                    s.user_id,
+                    FALSE AS is_owner,
+                    owner.email AS shared_by_email,
+                    s.name,
+                    s.category,
+                    s.billing_cycle,
+                    s.amount,
+                    s.currency,
+                    s.next_billing_date,
+                    s.notes,
+                    s.created_at,
+                    s.updated_at
+                FROM subscriptions s
+                INNER JOIN subscription_shares share ON share.subscription_id = s.id AND share.shared_with_user_id = @UserId
+                INNER JOIN users owner ON owner.id = s.user_id
+            )
             SELECT
                 id,
                 user_id AS UserId,
+                is_owner AS IsOwner,
+                shared_by_email AS SharedByEmail,
                 name,
                 category,
                 billing_cycle AS BillingCycle,
@@ -61,34 +102,47 @@ public class SubscriptionRepository : ISubscriptionRepository
                 notes,
                 created_at AS CreatedAt,
                 updated_at AS UpdatedAt
-            FROM subscriptions
-            WHERE user_id = @UserId
-              AND (@Search IS NULL OR name ILIKE '%' || @Search || '%' OR category ILIKE '%' || @Search || '%')
-              AND (@Category IS NULL OR category = @Category)
-              AND (@BillingCycle IS NULL OR billing_cycle = @BillingCycle)
-              AND (
-                    @UpcomingToDate IS NULL
-                    OR (next_billing_date >= @TodayDate AND next_billing_date <= @UpcomingToDate)
-                  )
-            ORDER BY next_billing_date ASC, updated_at DESC;";
+            FROM accessible_subscriptions
+            WHERE 1 = 1");
 
-        var nowDate = DateTime.UtcNow.Date;
-        DateTime? upcomingToDate = null;
-        if (upcomingDays is > 0)
+        var parameters = new DynamicParameters();
+        parameters.Add("UserId", userId);
+
+        var normalizedSearch = string.IsNullOrWhiteSpace(search) ? null : search.Trim();
+        if (!string.IsNullOrEmpty(normalizedSearch))
         {
-            upcomingToDate = nowDate.AddDays(upcomingDays.Value);
+            sqlBuilder.Append("\n  AND (name ILIKE '%' || @Search || '%' OR category ILIKE '%' || @Search || '%')");
+            parameters.Add("Search", normalizedSearch);
         }
 
-        using var connection = CreateConnection();
-        return await connection.QueryAsync<SubscriptionItem>(sql, new
+        var normalizedCategory = string.IsNullOrWhiteSpace(category) ? null : category.Trim();
+        if (!string.IsNullOrEmpty(normalizedCategory))
         {
-            UserId = userId,
-            Search = string.IsNullOrWhiteSpace(search) ? null : search.Trim(),
-            Category = string.IsNullOrWhiteSpace(category) ? null : category.Trim(),
-            BillingCycle = string.IsNullOrWhiteSpace(billingCycle) ? null : billingCycle.Trim().ToLowerInvariant(),
-            TodayDate = nowDate,
-            UpcomingToDate = upcomingToDate
-        });
+            sqlBuilder.Append("\n  AND category = @Category");
+            parameters.Add("Category", normalizedCategory);
+        }
+
+        var normalizedBillingCycle = string.IsNullOrWhiteSpace(billingCycle) ? null : billingCycle.Trim().ToLowerInvariant();
+        if (!string.IsNullOrEmpty(normalizedBillingCycle))
+        {
+            sqlBuilder.Append("\n  AND billing_cycle = @BillingCycle");
+            parameters.Add("BillingCycle", normalizedBillingCycle);
+        }
+
+        if (upcomingDays is > 0)
+        {
+            var todayDate = DateTime.UtcNow.Date;
+            var upcomingToDate = todayDate.AddDays(upcomingDays.Value);
+
+            sqlBuilder.Append("\n  AND next_billing_date >= @TodayDate AND next_billing_date <= @UpcomingToDate");
+            parameters.Add("TodayDate", todayDate);
+            parameters.Add("UpcomingToDate", upcomingToDate);
+        }
+
+        sqlBuilder.Append("\nORDER BY next_billing_date ASC, updated_at DESC;");
+
+        using var connection = CreateConnection();
+        return await connection.QueryAsync<SubscriptionItem>(sqlBuilder.ToString(), parameters);
     }
 
     public async Task<IEnumerable<SubscriptionItem>> GetUpcomingAsync(Guid userId, int days)
@@ -105,9 +159,49 @@ public class SubscriptionRepository : ISubscriptionRepository
         }
 
         const string sql = @"
+            WITH accessible_subscriptions AS (
+                SELECT
+                    s.id,
+                    s.user_id,
+                    TRUE AS is_owner,
+                    NULL::text AS shared_by_email,
+                    s.name,
+                    s.category,
+                    s.billing_cycle,
+                    s.amount,
+                    s.currency,
+                    s.next_billing_date,
+                    s.notes,
+                    s.created_at,
+                    s.updated_at
+                FROM subscriptions s
+                WHERE s.user_id = @UserId
+
+                UNION ALL
+
+                SELECT
+                    s.id,
+                    s.user_id,
+                    FALSE AS is_owner,
+                    owner.email AS shared_by_email,
+                    s.name,
+                    s.category,
+                    s.billing_cycle,
+                    s.amount,
+                    s.currency,
+                    s.next_billing_date,
+                    s.notes,
+                    s.created_at,
+                    s.updated_at
+                FROM subscriptions s
+                INNER JOIN subscription_shares share ON share.subscription_id = s.id AND share.shared_with_user_id = @UserId
+                INNER JOIN users owner ON owner.id = s.user_id
+            )
             SELECT
                 id,
                 user_id AS UserId,
+                is_owner AS IsOwner,
+                shared_by_email AS SharedByEmail,
                 name,
                 category,
                 billing_cycle AS BillingCycle,
@@ -117,9 +211,8 @@ public class SubscriptionRepository : ISubscriptionRepository
                 notes,
                 created_at AS CreatedAt,
                 updated_at AS UpdatedAt
-            FROM subscriptions
-            WHERE user_id = @UserId
-              AND id = @Id;";
+            FROM accessible_subscriptions
+            WHERE id = @Id;";
 
         using var connection = CreateConnection();
         return await connection.QueryFirstOrDefaultAsync<SubscriptionItem>(sql, new { UserId = userId, Id = id });
@@ -162,6 +255,8 @@ public class SubscriptionRepository : ISubscriptionRepository
             RETURNING
                 id,
                 user_id AS UserId,
+                TRUE AS IsOwner,
+                NULL::text AS SharedByEmail,
                 name,
                 category,
                 billing_cycle AS BillingCycle,
@@ -214,6 +309,8 @@ public class SubscriptionRepository : ISubscriptionRepository
             RETURNING
                 id,
                 user_id AS UserId,
+                TRUE AS IsOwner,
+                NULL::text AS SharedByEmail,
                 name,
                 category,
                 billing_cycle AS BillingCycle,
@@ -255,6 +352,92 @@ public class SubscriptionRepository : ISubscriptionRepository
         using var connection = CreateConnection();
         var rows = await connection.ExecuteAsync(sql, new { UserId = userId, Id = id });
         return rows > 0;
+    }
+
+    public async Task<bool> ShareAsync(Guid ownerUserId, Guid subscriptionId, Guid sharedWithUserId, string sharedWithEmail)
+    {
+        if (!await CanUseDatabaseAsync())
+        {
+            return InMemoryAppStore.ShareSubscription(ownerUserId, subscriptionId, sharedWithUserId, sharedWithEmail);
+        }
+
+        const string sql = @"
+            INSERT INTO subscription_shares (
+                id,
+                subscription_id,
+                shared_with_user_id,
+                shared_by_user_id,
+                created_at
+            )
+            SELECT
+                @Id,
+                s.id,
+                @SharedWithUserId,
+                @SharedByUserId,
+                @CreatedAt
+            FROM subscriptions s
+            WHERE s.id = @SubscriptionId
+              AND s.user_id = @SharedByUserId
+            ON CONFLICT (subscription_id, shared_with_user_id) DO NOTHING
+            RETURNING id;";
+
+        using var connection = CreateConnection();
+        var insertedId = await connection.QueryFirstOrDefaultAsync<Guid?>(sql, new
+        {
+            Id = Guid.NewGuid(),
+            SubscriptionId = subscriptionId,
+            SharedWithUserId = sharedWithUserId,
+            SharedByUserId = ownerUserId,
+            CreatedAt = DateTime.UtcNow
+        });
+
+        return insertedId.HasValue;
+    }
+
+    public async Task<bool> RevokeShareAsync(Guid ownerUserId, Guid subscriptionId, Guid sharedWithUserId)
+    {
+        if (!await CanUseDatabaseAsync())
+        {
+            return InMemoryAppStore.RevokeShare(ownerUserId, subscriptionId, sharedWithUserId);
+        }
+
+        const string sql = @"
+            DELETE FROM subscription_shares
+            WHERE subscription_id = @SubscriptionId
+              AND shared_with_user_id = @SharedWithUserId
+              AND shared_by_user_id = @SharedByUserId;";
+
+        using var connection = CreateConnection();
+        var rows = await connection.ExecuteAsync(sql, new
+        {
+            SubscriptionId = subscriptionId,
+            SharedWithUserId = sharedWithUserId,
+            SharedByUserId = ownerUserId
+        });
+
+        return rows > 0;
+    }
+
+    public async Task<IEnumerable<TodoApi.Models.SubscriptionShareDto>> GetSharesAsync(Guid ownerUserId, Guid subscriptionId)
+    {
+        if (!await CanUseDatabaseAsync())
+        {
+            return InMemoryAppStore.GetShares(ownerUserId, subscriptionId);
+        }
+
+        const string sql = @"
+            SELECT
+                s.shared_with_user_id AS SharedWithUserId,
+                u.email AS SharedWithEmail,
+                s.created_at AS CreatedAt
+            FROM subscription_shares s
+            INNER JOIN subscriptions sub ON sub.id = s.subscription_id AND sub.user_id = @OwnerUserId
+            INNER JOIN users u ON u.id = s.shared_with_user_id
+            WHERE s.subscription_id = @SubscriptionId
+            ORDER BY s.created_at ASC;";
+
+        using var connection = CreateConnection();
+        return await connection.QueryAsync<TodoApi.Models.SubscriptionShareDto>(sql, new { OwnerUserId = ownerUserId, SubscriptionId = subscriptionId });
     }
 
     private async Task<bool> CanUseDatabaseAsync()

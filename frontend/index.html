@@ -12,7 +12,10 @@
   <body>
     <header class="app-header">
       <h1>Subscription Tracker</h1>
-      <p id="netStatus" class="net online">Online</p>
+      <div class="header-right">
+        <p id="netStatus" class="net online">Online</p>
+        <p id="userInfo" class="user-info">No logueado</p>
+      </div>
     </header>
 
     <main class="container">
@@ -38,11 +41,11 @@
           <div class="summary-grid">
             <article class="summary-card">
               <p class="summary-label">Mensual estimado</p>
-              <p id="monthlyTotal" class="summary-value">$0.00</p>
+              <p id="monthlyTotal" class="summary-value">₡0.00</p>
             </article>
             <article class="summary-card">
               <p class="summary-label">Anual estimado</p>
-              <p id="yearlyTotal" class="summary-value">$0.00</p>
+              <p id="yearlyTotal" class="summary-value">₡0.00</p>
             </article>
             <article class="summary-card">
               <p class="summary-label">Cobros proximos (30 dias)</p>
@@ -50,6 +53,12 @@
             </article>
           </div>
           <p id="cycleTotals" class="status-text">Totales por ciclo: -</p>
+        </section>
+
+        <section id="participationsSection" class="card-block">
+          <h2>Participaciones</h2>
+          <p class="status-text">Suscripciones compartidas contigo:</p>
+          <div id="participationsList" class="list"></div>
         </section>
 
         <section class="card-block">
@@ -65,7 +74,7 @@
               <option value="quarterly">Quarterly</option>
             </select>
             <input id="amountInput" type="number" min="0" step="0.01" placeholder="Monto" />
-            <input id="currencyInput" type="text" placeholder="Moneda (USD)" value="USD" />
+            <input id="currencyInput" type="text" placeholder="Moneda (CRC)" value="CRC" />
             <input id="nextBillingInput" type="date" />
           </div>
           <textarea id="notesInput" rows="2" placeholder="Notas (opcional)"></textarea>
@@ -97,6 +106,25 @@
         </section>
       </section>
     </main>
+
+    <!-- Modal para gestionar compartidos -->
+    <div id="shareModal" class="modal hidden">
+      <div class="modal-backdrop" id="shareModalBackdrop"></div>
+      <div class="modal-content" role="dialog" aria-modal="true">
+        <header class="modal-header">
+          <h3 id="shareModalTitle">Gestionar compartidos</h3>
+          <button id="shareModalClose" class="ghost">Cerrar</button>
+        </header>
+        <section class="modal-body">
+          <div class="grid-2">
+            <input id="shareEmailInput" type="email" placeholder="Email a invitar" />
+            <button id="shareInviteBtn" class="primary">Invitar</button>
+          </div>
+          <h4>Miembros</h4>
+          <ul id="shareList" class="share-list"></ul>
+        </section>
+      </div>
+    </div>
 
     <script type="module" src="./app.js"></script>
   </body>

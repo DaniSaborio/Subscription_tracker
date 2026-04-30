@@ -8,10 +8,13 @@ import {
   initSubscriptions,
   login,
   logout,
+  revokeSubscriptionShare,
   refreshFromServer,
   register,
   syncPending,
+  shareSubscription,
   updateSubscription,
+  getSubscriptionShares,
 } from "./taskService.js";
 
 const netStatus = document.getElementById("netStatus");
@@ -45,20 +48,50 @@ const cycleTotals = document.getElementById("cycleTotals");
 const syncBtn = document.getElementById("syncBtn");
 const syncStatus = document.getElementById("syncStatus");
 const list = document.getElementById("list");
+const userInfo = document.getElementById("userInfo");
+const participationsList = document.getElementById("participationsList");
 
-function fmtMoney(value, currency = "USD") {
-  return new Intl.NumberFormat("en-US", {
+function fmtMoney(value, currency = "CRC") {
+  return new Intl.NumberFormat("es-CR", {
     style: "currency",
     currency,
     minimumFractionDigits: 2,
   }).format(value || 0);
 }
 
-function updateNetworkStatus() {
-  const online = navigator.onLine;
-  netStatus.textContent = online ? "Online" : "Offline";
-  netStatus.classList.toggle("online", online);
-  netStatus.classList.toggle("offline", !online);
+async function updateNetworkStatus() {
+  try {
+    // Intenta hacer un HEAD request a la API para verificar disponibilidad real
+    const response = await fetch("http://localhost:5000/health", {
+      method: "HEAD",
+      cache: "no-store",
+    });
+    // Solo "online" si responde 200-299 (DB conectada)
+    const online = response.ok;
+    netStatus.textContent = online ? "Online" : "Offline";
+    netStatus.classList.toggle("online", online);
+    netStatus.classList.toggle("offline", !online);
+  } catch (error) {
+    // Si hay error de conexión, mostrar como offline
+    netStatus.textContent = "Offline";
+    netStatus.classList.remove("online");
+    netStatus.classList.add("offline");
+  }
+}
+
+// Chequea el estado cada 3 segundos
+let networkCheckInterval = null;
+function startNetworkCheck() {
+  if (networkCheckInterval) return;
+  updateNetworkStatus();
+  networkCheckInterval = setInterval(updateNetworkStatus, 3000);
+}
+
+function stopNetworkCheck() {
+  if (networkCheckInterval) {
+    clearInterval(networkCheckInterval);
+    networkCheckInterval = null;
+  }
 }
 
 function getActiveFilters() {
@@ -82,7 +115,34 @@ async function renderSummary() {
   cycleTotals.textContent = `Totales por ciclo: ${parts.length ? parts.join(" | ") : "-"}`;
 }
 
+async function renderParticipations() {
+  if (!participationsList) return;
+  // Suscripciones donde isOwner === false
+  const subs = applyFilters({}).filter((s) => s.isOwner === false);
+  participationsList.innerHTML = "";
+
+  if (!subs.length) {
+    participationsList.innerHTML = '<p class="status-text">No estás participando en ninguna suscripción.</p>';
+    return;
+  }
+
+  for (const item of subs) {
+    const el = document.createElement("article");
+    el.className = "subscription-card small";
+    el.innerHTML = `
+      <div class="subscription-top">
+        <p class="subscription-name">${item.name}</p>
+        <p>${fmtMoney(item.amount, item.currency)} / ${item.billingCycle}</p>
+      </div>
+      <p class="subscription-meta">Compartida por: ${item.sharedByEmail || "-"} | Próx: ${item.nextBillingDate}</p>
+    `;
+    participationsList.appendChild(el);
+  }
+}
+
 function buildRow(item) {
+  // DEBUG: mostrar isOwner para investigar por qué no aparece el botón "Compartir"
+  try { console.debug('buildRow:', { id: item.id, isOwner: item.isOwner, raw: item }); } catch {}
   const soon = (() => {
     const now = new Date();
     const due = new Date(item.nextBillingDate);
@@ -96,6 +156,24 @@ function buildRow(item) {
   card.className = "subscription-card";
 
   const pendingBadge = item.synced === false ? '<span class="pending-badge">Pendiente de sync</span>' : "";
+  const sharedBadge = item.isOwner === false && item.sharedByEmail
+    ? `<span class="shared-badge">Compartida por ${item.sharedByEmail}</span>`
+    : "";
+
+  const actionButtons = item.isOwner === false
+    ? `
+      <div class="subscription-actions">
+        <button class="ghost" data-action="shared-info" disabled>Solo lectura</button>
+      </div>
+    `
+    : `
+      <div class="subscription-actions">
+        <button class="ghost" data-action="share">Compartir</button>
+        <button class="ghost" data-action="revoke">Revocar</button>
+        <button class="ghost" data-action="edit">Editar</button>
+        <button class="danger" data-action="delete">Eliminar</button>
+      </div>
+    `;
 
   card.innerHTML = `
     <div class="subscription-top">
@@ -106,50 +184,140 @@ function buildRow(item) {
       Categoria: ${item.category} | Proximo cobro: ${item.nextBillingDate} ${soon ? `| ${soon}` : ""}
     </p>
     <p class="subscription-meta">${item.notes || "Sin notas"}</p>
+    ${sharedBadge}
     ${pendingBadge}
-    <div class="subscription-actions">
-      <button class="ghost" data-action="edit">Editar</button>
-      <button class="danger" data-action="delete">Eliminar</button>
-    </div>
+    ${actionButtons}
   `;
 
-  card.querySelector('[data-action="edit"]').addEventListener("click", async () => {
-    const nextName = prompt("Nombre", item.name);
-    if (!nextName) return;
+  if (item.isOwner !== false) {
+    card.querySelector('[data-action="share"]').addEventListener("click", async () => {
+      showShareModal(item);
+    });
 
-    const nextCategory = prompt("Categoria", item.category);
-    if (!nextCategory) return;
+    card.querySelector('[data-action="revoke"]').addEventListener("click", async () => {
+      showShareModal(item);
+    });
 
-    const nextAmountText = prompt("Monto", String(item.amount));
-    if (!nextAmountText) return;
+    card.querySelector('[data-action="edit"]').addEventListener("click", async () => {
+      const nextName = prompt("Nombre", item.name);
+      if (!nextName) return;
 
-    const nextDate = prompt("Proximo cobro (YYYY-MM-DD)", item.nextBillingDate);
-    if (!nextDate) return;
+      const nextCategory = prompt("Categoria", item.category);
+      if (!nextCategory) return;
 
-    try {
-      await updateSubscription(item.id, {
-        name: nextName,
-        category: nextCategory,
-        billingCycle: item.billingCycle,
-        amount: Number(nextAmountText),
-        currency: item.currency,
-        nextBillingDate: nextDate,
-        notes: item.notes,
-      });
+      const nextAmountText = prompt("Monto", String(item.amount));
+      if (!nextAmountText) return;
+
+      const nextDate = prompt("Proximo cobro (YYYY-MM-DD)", item.nextBillingDate);
+      if (!nextDate) return;
+
+      try {
+        await updateSubscription(item.id, {
+          name: nextName,
+          category: nextCategory,
+          billingCycle: item.billingCycle,
+          amount: Number(nextAmountText),
+          currency: item.currency,
+          nextBillingDate: nextDate,
+          notes: item.notes,
+        });
+        await renderAll();
+      } catch (error) {
+        syncStatus.textContent = `No se pudo editar: ${error.message}`;
+      }
+    });
+
+    card.querySelector('[data-action="delete"]').addEventListener("click", async () => {
+      if (!confirm(`Eliminar ${item.name}?`)) return;
+
+      await deleteSubscription(item.id);
       await renderAll();
-    } catch (error) {
-      syncStatus.textContent = `No se pudo editar: ${error.message}`;
-    }
-  });
-
-  card.querySelector('[data-action="delete"]').addEventListener("click", async () => {
-    if (!confirm(`Eliminar ${item.name}?`)) return;
-
-    await deleteSubscription(item.id);
-    await renderAll();
-  });
+    });
+  }
 
   return card;
+}
+
+// Share modal logic
+const shareModal = () => ({
+  modal: document.getElementById("shareModal"),
+  backdrop: document.getElementById("shareModalBackdrop"),
+  title: document.getElementById("shareModalTitle"),
+  closeBtn: document.getElementById("shareModalClose"),
+  list: document.getElementById("shareList"),
+  input: document.getElementById("shareEmailInput"),
+  inviteBtn: document.getElementById("shareInviteBtn"),
+});
+
+function hideShareModal() {
+  const s = shareModal();
+  if (!s.modal) return;
+  s.modal.classList.add("hidden");
+}
+
+async function renderShares(subscriptionId) {
+  const s = shareModal();
+  s.list.innerHTML = "";
+  try {
+    const shares = await getSubscriptionShares(subscriptionId);
+    if (!shares || !shares.length) {
+      s.list.innerHTML = '<li class="status-text">No hay miembros compartidos.</li>';
+      return;
+    }
+
+    for (const sh of shares) {
+      const li = document.createElement("li");
+      const emailSpan = document.createElement("span");
+      emailSpan.textContent = sh.sharedWithEmail;
+      const revokeBtn = document.createElement("button");
+      revokeBtn.className = "ghost";
+      revokeBtn.textContent = "Revocar";
+      revokeBtn.addEventListener("click", async () => {
+        try {
+          await revokeSubscriptionShare(subscriptionId, sh.sharedWithEmail);
+          await renderShares(subscriptionId);
+          await refreshFromServer();
+          await renderAll();
+        } catch (err) {
+          syncStatus.textContent = `No se pudo revocar: ${err.message}`;
+        }
+      });
+
+      li.appendChild(emailSpan);
+      li.appendChild(revokeBtn);
+      s.list.appendChild(li);
+    }
+  } catch (err) {
+    s.list.innerHTML = `<li class="status-text">Error: ${err.message}</li>`;
+  }
+}
+
+function showShareModal(item) {
+  const s = shareModal();
+  if (!s.modal) return;
+  s.title.textContent = `Compartidos — ${item.name}`;
+  s.input.value = "";
+  s.modal.classList.remove("hidden");
+
+  // wire invite
+  s.inviteBtn.onclick = async () => {
+    const email = s.input.value.trim();
+    if (!email) return;
+    try {
+      await shareSubscription(item.id, email);
+      await renderShares(item.id);
+      await refreshFromServer();
+      await renderAll();
+      s.input.value = "";
+    } catch (err) {
+      syncStatus.textContent = `No se pudo invitar: ${err.message}`;
+    }
+  };
+
+  s.closeBtn.onclick = hideShareModal;
+  s.backdrop.onclick = hideShareModal;
+
+  renderShares(item.id);
 }
 
 async function renderList() {
@@ -177,6 +345,7 @@ async function renderAll() {
   await renderSummary();
   await renderList();
   await updateSyncLabel();
+  await renderParticipations();
 }
 
 function setAuthUi(loggedIn, email = "") {
@@ -185,6 +354,10 @@ function setAuthUi(loggedIn, email = "") {
 
   if (loggedIn) {
     authStatus.textContent = `Sesion activa: ${email}`;
+    if (userInfo) userInfo.textContent = `Usuario: ${email}`;
+  }
+  else {
+    if (userInfo) userInfo.textContent = `No logueado`;
   }
 }
 
@@ -291,6 +464,9 @@ function bindEvents() {
     updateNetworkStatus();
     syncStatus.textContent = "Modo offline activo. Los cambios quedan pendientes.";
   });
+
+  // Monitorear disponibilidad real de la API cada 3 segundos
+  startNetworkCheck();
 }
 
 export async function initUI() {
